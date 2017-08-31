@@ -44,6 +44,8 @@ public class OcrResult {
   private long recognitionTimeRequired;
 
   private Paint paint;
+
+  private List<LedComposition> foundLeds;
   
   public OcrResult(Bitmap bitmap,
                    String text,
@@ -188,7 +190,15 @@ public class OcrResult {
   public void setCharacterBoundingBoxes(List<Rect> characterBoundingBoxes) {
     this.characterBoundingBoxes = characterBoundingBoxes;
   }
-  
+
+  public List<LedComposition> getFoundLeds() {
+    return foundLeds;
+  }
+
+  public void setFoundLeds(List<LedComposition> foundLeds) {
+    this.foundLeds = foundLeds;
+  }
+
   @Override
   public String toString() {
     return text + " " + meanConfidence + " " + recognitionTimeRequired + " " + timestamp;

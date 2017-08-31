@@ -16,9 +16,9 @@
  */
 package edu.sfsu.cs.orange.ocr;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import edu.sfsu.cs.orange.ocr.R;
 import edu.sfsu.cs.orange.ocr.camera.CameraManager;
 
 import android.content.Context;
@@ -46,7 +46,7 @@ public final class ViewfinderView extends View {
   static final boolean DRAW_REGION_BOXES = false;
 
   /** Flag to draw boxes representing the results from TessBaseAPI::GetTextlines(). */
-  static final boolean DRAW_TEXTLINE_BOXES = true;
+  static final boolean DRAW_TEXTLINE_BOXES = false;
 
   /** Flag to draw boxes representing the results from TessBaseAPI::GetStrips(). */
   static final boolean DRAW_STRIP_BOXES = false;
@@ -82,6 +82,8 @@ public final class ViewfinderView extends View {
   private Rect previewFrame;
   private Rect rect;
 
+  List<LedComposition> leds = new ArrayList<LedComposition>();
+
   // This constructor is used when the class is built from an XML resource.
   public ViewfinderView(Context context, AttributeSet attrs) {
     super(context, attrs);
@@ -100,6 +102,18 @@ public final class ViewfinderView extends View {
 
   public void setCameraManager(CameraManager cameraManager) {
     this.cameraManager = cameraManager;
+  }
+
+  private float getScale(List<LedComposition> leds) {
+    if(leds.isEmpty()) {
+      return 1;
+    }
+    else if(leds.size() == 1) {
+      return leds.get(0).getScale();
+    }
+    else {
+      return (leds.get(1).getPosition().top - leds.get(0).getPosition().top) / (leds.get(1).getOffset() - leds.get(0).getOffset());
+    }
   }
 
   @SuppressWarnings("unused")
@@ -191,17 +205,49 @@ public final class ViewfinderView extends View {
           paint.setAlpha(0xFF);
           paint.setColor(0xFF00CCFF);
           paint.setStyle(Style.STROKE);
-          paint.setStrokeWidth(1);
-          for (int i = 0; i < wordBoundingBoxes.size(); i++) {
-            // Draw a bounding box around the word
-            rect = wordBoundingBoxes.get(i);
-            canvas.drawRect(
-                frame.left + rect.left * scaleX,
-                frame.top + rect.top * scaleY, 
-                frame.left + rect.right * scaleX, 
-                frame.top + rect.bottom * scaleY, paint);
+          paint.setStrokeWidth(2);
+
+          if (!resultText.getFoundLeds().isEmpty()) {
+
+            LedComposition first = resultText.getFoundLeds().get(0);
+            final float scale = getScale(leds);
+            float topOffset = first.getPosition().top - first.getOffset() * scale;
+
+            leds.clear();
+            int i = 0;
+            for (LedComposition led : LedComposition.LIST) {
+              if(i < resultText.getFoundLeds().size() && led.getName().equals(resultText.getFoundLeds().get(i).getName())) {
+                leds.add(resultText.getFoundLeds().get(i++));
+              }
+              else {
+                int size = (int) (30 * first.getScale());
+                float offset = (int) (led.getOffset() * scale);
+                led.setPosition(first.getPosition().left, (int) (topOffset + offset), first.getPosition().left + size, (int) (topOffset + offset + size));
+                leds.add(led);
+              }
+            }
+
+            for (LedComposition led : leds) {
+
+              // Draw a bounding box around the word and LED
+              rect = led.getPosition();
+              paint.setColor(led.getColor());
+              canvas.drawRect(
+                      frame.left + rect.left * scaleX,
+                      frame.top + rect.top * scaleY,
+                      frame.left + rect.right * scaleX,
+                     frame.top + rect.bottom * scaleY, paint);
+
+              // estimated LED Position
+              paint.setColor(led.getColor());
+              float dist = led.getScale() * 100.f;
+              canvas.drawRect(frame.left + (rect.left + dist) * scaleX,
+                      frame.top + rect.top * scaleY,
+                      frame.left + (rect.left + dist + rect.bottom - rect.top) * scaleX,
+                      frame.top + rect.bottom * scaleY, paint);
+            }
           }
-        }  
+        }
 
         if (DRAW_WORD_TEXT) { 
           words = resultText.getText().replace("\n"," ").split(" ");

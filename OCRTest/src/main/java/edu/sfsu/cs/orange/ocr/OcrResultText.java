@@ -24,6 +24,7 @@ import android.graphics.Rect;
  * Encapsulates text and its character/word coordinates resulting from OCR.
  */
 public final class OcrResultText {
+
   private final String text;
   
   private final int[] wordConfidences;
@@ -34,6 +35,7 @@ public final class OcrResultText {
   private final List<Rect> stripBoundingBoxes;
   private final List<Rect> wordBoundingBoxes;
   private final List<Rect> characterBoundingBoxes;
+  private final List<LedComposition> foundLeds;
   
   public OcrResultText(String text,
                    int[] wordConfidences,
@@ -43,7 +45,8 @@ public final class OcrResultText {
                    List<Rect> textlineBoundingBoxes,
                    List<Rect> stripBoundingBoxes,
                    List<Rect> wordBoundingBoxes,
-                   List<Rect> characterBoundingBoxes) {
+                   List<Rect> characterBoundingBoxes,
+                       List<LedComposition> foundLeds) {
     this.text = text;
     this.wordConfidences = wordConfidences;
     this.meanConfidence = meanConfidence;
@@ -53,6 +56,7 @@ public final class OcrResultText {
     this.stripBoundingBoxes = stripBoundingBoxes;
     this.wordBoundingBoxes = wordBoundingBoxes;
     this.characterBoundingBoxes = characterBoundingBoxes;
+    this.foundLeds = foundLeds;
   }
 
   public String getText() {
@@ -90,7 +94,11 @@ public final class OcrResultText {
   public List<Rect> getCharacterBoundingBoxes() {
     return characterBoundingBoxes;
   }
-  
+
+  public List<LedComposition> getFoundLeds() {
+    return foundLeds;
+  }
+
   @Override
   public String toString() {
     return text + " " + meanConfidence;

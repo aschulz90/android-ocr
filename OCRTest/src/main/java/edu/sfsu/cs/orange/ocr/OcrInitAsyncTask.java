@@ -285,7 +285,8 @@ final class OcrInitAsyncTask extends AsyncTask<String, String, Boolean> {
 
     // Initialize the OCR engine
     if (baseApi.init(destinationDirBase + File.separator, languageCode, ocrEngineMode)) {
-      return installSuccess && osdInstallSuccess;
+        baseApi.setVariable("tessedit_enable_doc_dict", "0");
+        return installSuccess && osdInstallSuccess;
     }
     return false;
   }
@@ -472,7 +473,7 @@ final class OcrInitAsyncTask extends AsyncTask<String, String, Boolean> {
   /**
    * Returns the uncompressed size for a Gzipped file.
    * 
-   * @param file
+   * @param zipFile
    *          Gzipped file to get the size for
    * @return Size when uncompressed, in bytes
    * @throws IOException

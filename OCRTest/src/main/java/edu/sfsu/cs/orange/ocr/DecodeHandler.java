@@ -17,19 +17,21 @@
 
 package edu.sfsu.cs.orange.ocr;
 
-import edu.sfsu.cs.orange.ocr.BeepManager;
-
 import com.googlecode.leptonica.android.Pixa;
 import com.googlecode.leptonica.android.ReadFile;
+import com.googlecode.tesseract.android.ResultIterator;
 import com.googlecode.tesseract.android.TessBaseAPI;
 
-import edu.sfsu.cs.orange.ocr.CaptureActivity;
-import edu.sfsu.cs.orange.ocr.R;
 import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
+
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Class to send bitmap data for OCR.
@@ -144,16 +146,35 @@ final class DecodeHandler extends Handler {
     String textResult;
     long start = System.currentTimeMillis();
 
-    try {     
+    try {
       baseApi.setImage(ReadFile.readBitmap(bitmap));
       textResult = baseApi.getUTF8Text();
       timeRequired = System.currentTimeMillis() - start;
-
       // Check for failure to recognize text
       if (textResult == null || textResult.equals("")) {
         return null;
       }
+
+        final ResultIterator iterator = baseApi.getResultIterator();
+        final List<LedComposition> foundLeds = new ArrayList<LedComposition>();
+        iterator.begin();
+        do {
+            String word = iterator.getUTF8Text(TessBaseAPI.PageIteratorLevel.RIL_WORD);
+            if(word != null && !word.trim().isEmpty()) {
+                Log.w("OcrRecognizeAsyncTask", "Found word: " + word + " | " + iterator.getBoundingRect(TessBaseAPI.PageIteratorLevel.RIL_WORD));
+                for(LedComposition keyWord : LedComposition.LIST) {
+                    Log.d("OcrRecognizeAsyncTask", word + " similarity to " + keyWord + ": " + StringUtils.getJaroWinklerDistance(word, keyWord.getName()));
+                    if(StringUtils.getJaroWinklerDistance(word, keyWord.getName()) > 0.8) {
+                        foundLeds.add(new LedComposition(keyWord, iterator.getBoundingRect(TessBaseAPI.PageIteratorLevel.RIL_WORD)));
+                        break;
+                    }
+                }
+
+            }
+        } while (iterator.next(TessBaseAPI.PageIteratorLevel.RIL_WORD));
+
       ocrResult = new OcrResult();
+
       ocrResult.setWordConfidences(baseApi.wordConfidences());
       ocrResult.setMeanConfidence( baseApi.meanConfidence());
       if (ViewfinderView.DRAW_REGION_BOXES) {
@@ -175,13 +196,11 @@ final class DecodeHandler extends Handler {
       // Always get the word bounding boxes--we want it for annotating the bitmap after the user
       // presses the shutter button, in addition to maybe wanting to draw boxes/words during the
       // continuous mode recognition.
-      Pixa words = baseApi.getWords();
+      /*Pixa words = baseApi.getWords();
       ocrResult.setWordBoundingBoxes(words.getBoxRects());
-      words.recycle();
-      
-//      if (ViewfinderView.DRAW_CHARACTER_BOXES || ViewfinderView.DRAW_CHARACTER_TEXT) {
-//        ocrResult.setCharacterBoundingBoxes(baseApi.getCharacters().getBoxRects());
-//      }
+      words.recycle();*/
+      ocrResult.setFoundLeds(foundLeds);
+
     } catch (RuntimeException e) {
       Log.e("OcrRecognizeAsyncTask", "Caught RuntimeException in request to Tesseract. Setting state to CONTINUOUS_STOPPED.");
       e.printStackTrace();
